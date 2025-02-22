@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendWise - Smart Expense Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+</head>
+<style>
+    .clay-card {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 20px;
+        box-shadow: 
+            8px 8px 16px rgb(163, 177, 198, 0.6),
+            -8px -8px 16px rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .clay-button {
+        background: linear-gradient(145deg, #e6e6e6, #ffffff);
+        box-shadow: 
+            5px 5px 10px rgb(163, 177, 198, 0.6),
+            -5px -5px 10px rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    .clay-button:hover {
+        box-shadow: 
+            3px 3px 6px rgb(163, 177, 198, 0.6),
+            -3px -3px 6px rgba(255, 255, 255, 0.5);
+    }
+    .clay-input {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: inset 2px 2px 5px rgb(163, 177, 198, 0.6);
+    }
+    .progress-bar {
+        transition: width 0.5s ease-in-out;
+    }
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #f0f4f8;
+    }
+    .notification {
+        animation: slideIn 0.5s ease-out;
+    }
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="clay-card p-6 mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">SpendWise <span class="text-blue-600">AI</span></h1>
+            <p class="text-gray-600">Smart Expense Tracking & Financial Insights</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Add Expense Form -->
+            <div class="clay-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Add New Expense</h2>
+                <form id="expenseForm" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 mb-2">Description</label>
+                        <input type="text" id="description" class="clay-input w-full p-3 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2">Amount</label>
+                        <input type="number" id="amount" class="clay-input w-full p-3 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2">Category</label>
+                        <select id="category" class="clay-input w-full p-3 rounded-lg">
+                            <option value="food">Food</option>
+                            <option value="transport">Transport</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="shopping">Shopping</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="clay-button w-full p-3 rounded-lg text-blue-600 font-semibold">
+                        Add Expense
+                    </button>
+                </form>
+
+                <div class="mt-4">
+                    <label class="block text-gray-700 mb-2">Import CSV</label>
+                    <input type="file" id="csvFile" accept=".csv" class="clay-input w-full p-2 rounded-lg">
+                </div>
+            </div>
+
+            <!-- Budget Settings -->
+            <div class="clay-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Budget Settings</h2>
+                <div class="space-y-4">
+                    <div id="categoryBudgets">
+                        <!-- Category budgets will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Expense Overview -->
+            <div class="clay-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Expense Overview</h2>
+                <canvas id="expenseChart" height="200"></canvas>
+            </div>
+
+            <!-- Monthly Trend -->
+            <div class="clay-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Monthly Trend</h2>
+                <canvas id="trendChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Recent Expenses Table -->
+        <div class="clay-card p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Recent Expenses</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="p-3 text-left">Date</th>
+                            <th class="p-3 text-left">Description</th>
+                            <th class="p-3 text-left">Category</th>
+                            <th class="p-3 text-left">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expenseTable">
+                        <!-- Expenses will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- AI Chatbot -->
+        <div class="fixed bottom-4 right-4">
+            <div id="chatbot" class="clay-card p-4 hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold">Financial Assistant</h3>
+                    <button onclick="toggleChat()" class="text-gray-500 hover:text-gray-700">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div id="chatMessages" class="h-64 overflow-y-auto mb-4 space-y-2">
+                    <!-- Chat messages will appear here -->
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="userMessage" class="clay-input flex-1 p-2 rounded-lg" placeholder="Ask for financial advice...">
+                    <button onclick="sendMessage()" class="clay-button p-2 rounded-lg text-blue-600">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </div>
+            </div>
+            <button onclick="toggleChat()" class="clay-button w-12 h-12 rounded-full flex items-center justify-center text-blue-600">
+                <i class="bi bi-chat-dots-fill"></i>
+            </button>
+        </div>
+
+        <!-- Notifications -->
+        <div id="notifications" class="fixed top-4 right-4 space-y-2">
+            <!-- Notifications will appear here -->
+        </div>
+    </div>
+
+<script>
+let expenses = [];
+let budgets = {
+    food: 500,
+    transport: 300,
+    utilities: 400,
+    entertainment: 200,
+    shopping: 400
+};
+
+// Initialize charts
+const ctx = document.getElementById('expenseChart').getContext('2d');
+const trendCtx = document.getElementById('trendChart').getContext('2d');
+
+let expenseChart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+        labels: [],
+        datasets: [{
+            data: [],
+            backgroundColor: [
+                '#FF6384',
+                '#36A2EB',
+                '#FFCE56',
+                '#4BC0C0',
+                '#9966FF'
+            ]
+        }]
+    }
+});
+
+let trendChart = new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'Monthly Spending',
+            data: [],
+            borderColor: '#36A2EB',
+            tension: 0.1
+        }]
+    }
+});
+
+// Event Listeners
+document.getElementById('expenseForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    addExpense();
+});
+
+document.getElementById('description').addEventListener('input', function(e) {
+    const description = e.target.value.toLowerCase();
+    let suggestedCategory = 'other';
+    
+    const categories = {
+        food: ['grocery', 'restaurant', 'food', 'meal', 'lunch', 'dinner'],
+        transport: ['gas', 'fuel', 'uber', 'taxi', 'bus', 'train'],
+        utilities: ['electricity', 'water', 'internet', 'phone', 'gas'],
+        entertainment: ['movie', 'game', 'concert', 'netflix', 'spotify'],
+        shopping: ['clothes', 'shoes', 'amazon', 'mall']
+    };
+
+    for (let category in categories) {
+        if (categories[category].some(keyword => description.includes(keyword))) {
+            suggestedCategory = category;
+            break;
+        }
+    }
+
+    document.getElementById('category').value = suggestedCategory;
+});
+
+document.getElementById('csvFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    Papa.parse(file, {
+        complete: function(results) {
+            results.data.forEach(row => {
+                if (row.length >= 3) {
+                    expenses.push({
+                        date: new Date(),
+                        description: row[0],
+                        amount: parseFloat(row[1]),
+                        category: row[2]
+                    });
+                }
+            });
+            updateUI();
+            showNotification('CSV file imported successfully!', 'success');
+        }
+    });
+});
+
+// Functions
+function addExpense() {
+    const description = document.getElementById('description').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    const category = document.getElementById('category').value;
+
+    expenses.push({
+        date: new Date(),
+        description,
+        amount,
+        category
+    });
+
+    updateUI();
+    checkBudget(category);
+    document.getElementById('expenseForm').reset();
+}
+
+function updateUI() {
+    updateTable();
+    updateCharts();
+    updateBudgetProgress();
+}
+
+function updateTable() {
+    const table = document.getElementById('expenseTable');
+    table.innerHTML = '';
+    
+    expenses.slice(-5).forEach(expense => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="p-3">${expense.date.toLocaleDateString()}</td>
+            <td class="p-3">${expense.description}</td>
+            <td class="p-3">${expense.category}</td>
+            <td class="p-3">$${expense.amount.toFixed(2)}</td>
+        `;
+        table.appendChild(row);
+    });
+}
+
+function updateCharts() {
+    // Update Pie Chart
+    const categoryTotals = {};
+    expenses.forEach(expense => {
+        categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.amount;
+    });
+
+    expenseChart.data.labels = Object.keys(categoryTotals);
+    expenseChart.data.datasets[0].data = Object.values(categoryTotals);
+    expenseChart.update();
+
+    // Update Trend Chart
+    const monthlyTotals = {};
+    expenses.forEach(expense => {
+        const month = expense.date.toLocaleString('default', { month: 'short' });
+        monthlyTotals[month] = (monthlyTotals[month] || 0) + expense.amount;
+    });
+
+    trendChart.data.labels = Object.keys(monthlyTotals);
+    trendChart.data.datasets[0].data = Object.values(monthlyTotals);
+    trendChart.update();
+}
+
+function updateBudgetProgress() {
+    const categoryBudgets = document.getElementById('categoryBudgets');
+    categoryBudgets.innerHTML = '';
+
+    Object.entries(budgets).forEach(([category, budget]) => {
+        const spent = expenses
+            .filter(e => e.category === category)
+            .reduce((sum, e) => sum + e.amount, 0);
+        
+        const percentage = (spent / budget) * 100;
+        const color = percentage > 80 ? 'bg-red-500' : 'bg-blue-500';
+
+        categoryBudgets.innerHTML += `
+            <div class="mb-4">
+                <div class="flex justify-between mb-1">
+                    <span class="text-sm font-semibold">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                    <span class="text-sm">$${spent.toFixed(2)} / $${budget}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div class="progress-bar ${color} h-2.5 rounded-full" style="width: ${Math.min(percentage, 100)}%"></div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+function checkBudget(category) {
+    const spent = expenses
+        .filter(e => e.category === category)
+        .reduce((sum, e) => sum + e.amount, 0);
+    
+    const percentage = (spent / budgets[category]) * 100;
+    
+    if (percentage >= 80 && percentage < 100) {
+        showNotification(`Warning: You've used ${percentage.toFixed(0)}% of your ${category} budget!`, 'warning');
+    } else if (percentage >= 100) {
+        showNotification(`Alert: You've exceeded your ${category} budget!`, 'error');
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const notifications = document.getElementById('notifications');
+    const notification = document.createElement('div');
+    const bgColor = type === 'error' ? 'bg-red-500' : 
+                    type === 'warning' ? 'bg-yellow-500' : 
+                    type === 'success' ? 'bg-green-500' : 'bg-blue-500';
+
+    notification.className = `notification clay-card ${bgColor} text-white p-4 rounded-lg`;
+    notification.textContent = message;
+
+    notifications.appendChild(notification);
+    setTimeout(() => notification.remove(), 5000);
+}
+
+// Chatbot functionality
+function toggleChat() {
+    const chatbot = document.getElementById('chatbot');
+    chatbot.classList.toggle('hidden');
+}
+
+async function sendMessage() {
+    const userInput = document.getElementById('userMessage');
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    appendMessage('user', message);
+    userInput.value = '';
+
+    // Calculate some basic stats for the AI response
+    const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const categorySpending = {};
+    expenses.forEach(e => {
+        categorySpending[e.category] = (categorySpending[e.category] || 0) + e.amount;
+    });
+
+    const highestCategory = Object.entries(categorySpending)
+        .sort((a, b) => b[1] - a[1])[0];
+
+    // Prepare the analysis message
+    const analysis = `Based on your spending patterns:
+    - Total spent: $${totalSpent.toFixed(2)}
+    - Highest spending category: ${highestCategory[0]} ($${highestCategory[1].toFixed(2)})
+    - Suggestion: Consider reducing spending in ${highestCategory[0]} category.`;
+
+    setTimeout(() => appendMessage('bot', analysis), 1000);
+}
+
+function appendMessage(sender, message) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `p-2 rounded-lg ${sender === 'user' ? 'bg-blue-100 ml-auto' : 'bg-gray-100'} max-w-[80%]`;
+    messageDiv.textContent = message;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Initialize UI
+updateUI();
+</script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
